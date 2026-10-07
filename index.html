@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ouxe Transportes / MOVEX</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+  body { background:#f4f7f6; min-height:100vh; color:#1a2b4a; overflow-x:hidden; }
+  .hidden { display:none !important; }
+  .screen { padding:20px; max-width:500px; margin:0 auto; width:100%; }
+  .logo { text-align:center; margin:20px 0; cursor: default; user-select: none; }
+  .logo svg { max-width:280px; width:100%; height:auto; pointer-events: none; }
+  .btn { display:block; width:100%; padding:14px; margin:10px 0; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; transition:.2s; touch-action:manipulation; }
+  .btn-primary { background:linear-gradient(135deg,#0d3b66,#1a8a5c); color:#fff; }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(13,59,102,.3); }
+  .btn-primary:active { transform:translateY(0); }
+  .btn-secondary { background:#fff; color:#0d3b66; border:2px solid #0d3b66; }
+  .btn-danger { background:#c0392b; color:#fff; }
+  .btn-whatsapp { background:#25D366; color:#fff; }
+  .btn-sms { background:#3498db; color:#fff; }
+  .btn-link { background:transparent; color:#0d3b66; border:none; font-size:14px; text-decoration:underline; cursor:pointer; padding:8px; }
+  .btn-back { background:#7f8c8d; color:#fff; width:auto; padding:8px 16px; font-size:14px; border-radius:8px; border:none; cursor:pointer; }
+  input, select, textarea { width:100%; padding:12px; margin:8px 0; border:2px solid #dce1e8; border-radius:8px; font-size:15px; background:#fff; -webkit-appearance:none; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:#1a8a5c; }
+  .card { background:#fff; padding:16px; border-radius:12px; margin:10px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .card h3 { color:#0d3b66; margin-bottom:10px; font-size:16px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:12px; background:#0d3b66; color:#fff; border-radius:10px; margin-bottom:15px; flex-wrap:wrap; gap:8px; }
+  .stats { display:flex; gap:10px; flex-wrap:wrap; }
+  .stat { flex:1; min-width:120px; background:#fff; padding:12px; border-radius:10px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,.05); }
+  .stat strong { display:block; font-size:22px; color:#1a8a5c; }
+  .stat span { font-size:12px; color:#5a6b8c; }
+  .msg { padding:10px; border-radius:8px; margin:8px 0; font-size:14px; }
+  .msg-success { background:#d4edda; color:#155724; border:1px solid #155724; }
+  .msg-error { background:#f8d7da; color:#721c24; border:1px solid #721c24; }
+  .stars { font-size:28px; cursor:pointer; user-select:none; text-align:center; margin:10px 0; }
+  .stars span { color:#ddd; transition:.2s; }
+  .stars span.active { color:#f39c12; }
+  .item-list { list-style:none; }
+  .item-list li { padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .badge { background:#1a8a5c; color:#fff; padding:3px 8px; border-radius:12px; font-size:11px; }
+  .tabs { display:flex; gap:5px; margin-bottom:15px; flex-wrap:wrap; }
+  .tab { flex:1; min-width:80px; padding:10px; background:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; }
+  .tab.active { background:#0d3b66; color:#fff; }
+  .home-options { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
+  .home-options .btn { padding:18px; font-size:17px; }
+  .av-item { padding:8px 0; border-bottom:1px dashed #eee; font-size:13px; }
+  .notif-container { position:relative; cursor:pointer; padding:5px; }
+  .notif-bell { font-size:22px; }
+  .notif-badge { 
+    position:absolute; top:-2px; right:-2px; 
+    background:#e74c3c; color:#fff; 
+    border-radius:50%; width:18px; height:18px; 
+    font-size:11px; font-weight:bold;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid #0d3b66;
+  }
+  .notif-badge.hidden { display:none; }
+  .toast {
+    position:fixed; top:20px; left:50%; transform:translateX(-50%);
+    background:#0d3b66; color:#fff; padding:12px 20px; border-radius:8px;
+    box-shadow:0 4px 12px rgba(0,0,0,.2); z-index:9999;
+    animation: slideDown 0.3s ease;
+    max-width:90%;
+    text-align:center;
+  }
+  @keyframes slideDown { from { top:-50px; opacity:0; } to { top:20px; opacity:1; } }
+  .debug-box { background:#fff3cd; color:#856404; padding:12px; border-radius:6px; font-size:13px; margin-top:10px; border:1px solid #ffeaa7; }
+  .btn-row { display:flex; gap:8px; }
+  .btn-row .btn { flex:1; margin:4px 0; padding:10px; font-size:13px; }
+
+  /* Rastreamento */
+  #map { height: 350px; width: 100%; border-radius: 10px; margin-top: 10px; z-index: 1; }
+  .track-toggle { display:flex; align-items:center; justify-content:space-between; padding:10px; background:#e8f5e9; border-radius:8px; margin:8px 0; }
+  .track-toggle.off { background:#ffebee; }
+  .switch { position:relative; width:50px; height:26px; flex-shrink:0; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#ccc; border-radius:26px; transition:.3s; }
+  .slider:before { position:absolute; content:""; height:20px; width:20px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+  input:checked + .slider { background:#1a8a5c; }
+  input:checked + .slider:before { transform:translateX(24px); }
+  .track-status { font-size:13px; font-weight:600; }
+  .track-status.on { color:#1a8a5c; }
+  .track-status.off { color:#c0392b; }
+
+  /* RESPONSIVO */
+  @media (max-width: 600px) {
+    .screen { padding:15px; }
+    .logo svg { max-width:240px; }
+    .logo { margin:15px 0; }
+    .btn { padding:12px; font-size:15px; }
+    .home-options .btn { padding:15px; font-size:16px; }
+    .topbar { padding:10px; font-size:14px; }
+    .topbar span { font-size:14px; }
+    .stat { min-width:100px; padding:10px; }
+    .stat strong { font-size:20px; }
+    .stat span { font-size:11px; }
+    .card { padding:12px; }
+    .card h3 { font-size:15px; }
+    .tabs { gap:3px; }
+    .tab { padding:8px; font-size:12px; min-width:70px; }
+    .item-list li { padding:10px; font-size:14px; }
+    input, select, textarea { padding:10px; font-size:14px; }
+    .stars { font-size:24px; }
+    #map { height:280px; }
+    .btn-row { flex-direction:column; }
+    .btn-row .btn { font-size:14px; }
+    .track-toggle { flex-direction:column; align-items:flex-start; gap:8px; }
+    .switch { align-self:flex-end; }
+    .toast { font-size:14px; padding:10px 15px; }
+    .notif-bell { font-size:20px; }
+  }
+
+  @media (max-width: 400px) {
+    .screen { padding:10px; }
+    .logo svg { max-width:200px; }
+    .btn { padding:10px; font-size:14px; }
+    .home-options .btn { padding:12px; font-size:15px; }
+    .stat { min-width:90px; padding:8px; }
+    .stat strong { font-size:18px; }
+    .tab { font-size:11px; padding:6px; }
+    .item-list li { padding:8px; font-size:13px; }
+    input, select, textarea { padding:8px; font-size:13px; }
+    #map { height:240px; }
+    .btn-back { padding:6px 12px; font-size:13px; }
+  }
+
+  @media (min-width: 768px) {
+    .screen { max-width:600px; }
+    .logo svg { max-width:320px; }
+    .btn-row { flex-direction:row; }
+  }
+
+  @media (min-width: 1024px) {
+    .screen { max-width:700px; }
+    .logo svg { max-width:360px; }
+  }
+
+  /* Ajustes para landscape em mobile */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .screen { padding:10px; }
+    .logo { margin:10px 0; }
+    .logo svg { max-width:180px; }
+    .home-options .btn { padding:12px; }
+    #map { height:200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TELA INICIAL -->
+<div id="screen-home" class="screen">
+  <div id="logo-trigger" class="logo">
+    <!-- LOGO MOVEX OFICIAL -->
+    <svg viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#0d3b66"/>
+          <stop offset="50%" stop-color="#1a6b8a"/>
+          <stop offset="100%" stop-color="#1a8a5c"/>
+        </linearGradient>
+        <linearGradient id="gX" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1a8a5c"/>
+          <stop offset="100%" stop-color="#2ecc71"/>
+        </linearGradient>
+      </defs>
+      
+      <!-- Linhas de movimento (velocidade) -->
+      <rect x="30" y="60" width="50" height="8" rx="4" fill="#1a8a5c" opacity="0.8"/>
+      <rect x="20" y="80" width="70" height="8" rx="4" fill="#1a8a5c" opacity="0.6"/>
+      <rect x="40" y="100" width="40" height="8" rx="4" fill="#1a8a5c" opacity="0.4"/>
+      
+      <!-- M estilizado com estrada -->
+      <path d="M 80 160 L 110 50 Q 120 30 140 35 L 170 50 L 200 110 L 230 50 L 260 35 Q 280 30 290 50 L 320 160 L 280 160 L 260 90 L 230 140 L 200 140 L 170 90 L 140 160 Z" 
+            fill="url(#gLogo)"/>
+      
+      <!-- Estrada no meio do M -->
+      <path d="M 140 160 Q 170 100 200 110 Q 230 100 260 160" 
+            stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.9"/>
+      <path d="M 155 145 Q 175 115 200 120 Q 225 115 245 145" 
+            stroke="#fff" stroke-width="2" fill="none" stroke-dasharray="4,4" opacity="0.7"/>
+      
+      <!-- Silhueta de pessoa (lado esquerdo) -->
+      <circle cx="125" cy="95" r="10" fill="#fff"/>
+      <path d="M 110 130 Q 110 110 125 110 Q 140 110 140 130 L 140 145 L 110 145 Z" fill="#fff"/>
+      
+      <!-- Caixa (lado direito) -->
+      <rect x="255" y="110" width="22" height="22" fill="#fff" rx="2"/>
+      <path d="M 255 115 L 266 120 L 277 115" stroke="#0d3b66" stroke-width="1.5" fill="none"/>
+      <line x1="266" y1="120" x2="266" y2="132" stroke="#0d3b66" stroke-width="1.5"/>
+      
+      <!-- Texto MOVEX -->
+      <text x="200" y="210" font-size="58" font-weight="900" fill="#0d3b66" text-anchor="middle" font-family="Arial" letter-spacing="2">MOVE<tspan fill="url(#gX)">X</tspan></text>
+      
+      <!-- Slogan -->
+      <text x="200" y="240" font-size="13" fill="#0d3b66" text-anchor="middle" letter-spacing="3" font-weight="600">PESSOAS E ENCOMENDAS</text>
+      <text x="200" y="260" font-size="13" fill="#0d3b66" text-anchor="middle" letter-spacing="3" font-weight="600">SEMPRE EM MOVIMENTO</text>
+    </svg>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><strong id="stat-motoristas">0</strong><span>Motoristas ativos</span></div>
+    <div class="stat"><strong id="stat-corridas">0</strong><span>Viagens reais</span></div>
+  </div>
+
+  <div class="card">
+    <h3>⭐ Avaliações Reais</h3>
+    <div id="avaliacoes-lista"><p style="font-size:13px;color:#5a6b8c;">Nenhuma avaliação ainda.</p></div>
+  </div>
+
+  <div id="debug-info" class="hidden"></div>
+
+  <div class="home-options">
+    <button class="btn btn-primary" onclick="show('screen-passageiro-nome')">👤 Sou Passageiro / Cliente</button>
+    <button class="btn btn-secondary" onclick="show('screen-login')">🚗 Sou Motorista</button>
+    <button class="btn btn-secondary" onclick="show('screen-cadastro')"> Cadastrar Motorista</button>
+  </div>
+</div>
+
+<!-- PASSAGEIRO -->
+<div id="screen-passageiro-nome" class="screen hidden">
+  <button class="btn btn-back" onclick="show('screen-home')">← Voltar</button>
+  <h2 style="margin:15px 0;">Bem-vindo(a)!</h2>
+  <p style="color:#5a6b8c;margin-bottom:10px;">Informe seu nome e telefone para continuar.</p>
+  <input type="text" id="p-nome-input" placeholder="Seu nome">
+  <input type="tel" id="p-tel-input" placeholder="Telefone / WhatsApp (ex: 75 99999-9999)">
+  <small style="color:#5a6b8c;font-size:12px;">📱 O motorista usará este número para te contatar via WhatsApp ou SMS</small>
+  <div id="p-nome-msg"></div>
+  <button class="btn btn-primary" onclick="entrarPassageiro()">Continuar</button>
+</div>
+
+<!-- LOGIN MOTORISTA -->
+<div id="screen-login" class="screen hidden">
+  <button class="btn btn-back" onclick="show('screen-home')">← Voltar</button>
+  <h2 style="margin:15px 0;">Login do Motorista</h2>
+  <input type="text" id="login-user" placeholder="Usuário">
+  <input type="password" id="login-pass" placeholder="Senha">
+  <div id="login-msg"></div>
+  <button class="btn btn-primary" onclick="fazerLoginMotorista()">Entrar</button>
+  <button class="btn btn-link" onclick="abrirEsqueciSenha()">🔑 Esqueci minha senha</button>
+</div>
+
+<!-- MODAL ESQUECI SENHA -->
+<div id="modal-esqueci-senha" class="screen hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9998;max-width:100%;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div class="card" style="width:100%;max-width:450px;">
+    <h3>🔑 Recuperar Senha</h3>
+    <p style="font-size:13px;color:#5a6b8c;margin:10px 0;">Informe seu usuário para receber a senha no celular cadastrado.</p>
+    <input type="text" id="esq-user" placeholder="Seu usuário">
+    <div id="esq-msg"></div>
+    <div id="esq-resultado" class="hidden"></div>
+    <div class="btn-row">
+      <button class="btn btn-sms" onclick="enviarSenhaSMS()">💬 Enviar por SMS</button>
+    </div>
+    <button class="btn btn-secondary" onclick="fecharEsqueciSenha()">Cancelar</button>
+  </div>
+</div>
+
+<!-- CADASTRO MOTORISTA -->
+<div id="screen-cadastro" class="screen hidden">
+  <button class="btn btn-back" onclick="show('screen-home')">← Voltar</button>
+  <h2 style="margin:15px 0;">Cadastro de Motorista</h2>
+  <input type="text" id="cad-nome" placeholder="Nome completo">
+  <input type="text" id="cad-user" placeholder="Usuário (para login)" autocomplete="off">
+  <input type="password" id="cad-pass" placeholder="Senha" autocomplete="new-password">
+  <input type="text" id="cad-tel" placeholder="Telefone / Celular">
+  <input type="text" id="cad-veiculo" placeholder="Veículo (ex: Gol 2020 - ABC1234)">
+  <div id="cad-msg"></div>
+  <button class="btn btn-primary" onclick="cadastrarMotorista()">✅ Cadastrar Motorista</button>
+</div>
+
+<!-- PAINEL PASSAGEIRO -->
+<div id="screen-passageiro" class="screen hidden">
+  <div class="topbar">
+    <span>👤 <span id="p-nome-display"></span></span>
+    <button class="btn btn-back" onclick="sairPassageiro()">Sair</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="tabP('viagem',this)">🚗 Viagem</button>
+    <button class="tab" onclick="tabP('encomenda',this)">📦 Encomenda</button>
+    <button class="tab" onclick="tabP('rastreamento',this)"> Rastreamento</button>
+    <button class="tab" onclick="tabP('minhas',this)">📋 Minhas</button>
+  </div>
+
+  <div id="p-viagem">
+    <div class="card">
+      <h3>Solicitar Viagem</h3>
+      <label style="font-size:13px;color:#5a6b8c;">Origem (Cidade - BA)</label>
+      <select id="v-origem"><option value="">Selecione a origem</option></select>
+      <label style="font-size:13px;color:#5a6b8c;">Destino (Cidade - BA)</label>
+      <select id="v-destino"><option value="">Selecione o destino</option></select>
+      <label style="font-size:13px;color:#5a6b8c;">Quantidade de passageiros</label>
+      <input type="number" id="v-pessoas" placeholder="Ex: 2" min="1" max="10" value="1">
+      <label style="font-size:13px;color:#5a6b8c;">Data</label>
+      <input type="date" id="v-data">
+      <label style="font-size:13px;color:#5a6b8c;">Horário</label>
+      <select id="v-hora">
+        <option value="">Selecione o horário</option>
+        <option value="06:00">06:00 - Manhã cedo</option>
+        <option value="08:00">08:00 - Manhã</option>
+        <option value="10:00">10:00 - Meio da manhã</option>
+        <option value="12:00">12:00 - Meio-dia</option>
+        <option value="14:00">14:00 - Tarde</option>
+        <option value="16:00">16:00 - Final da tarde</option>
+        <option value="18:00">18:00 - Noite</option>
+        <option value="20:00">20:00 - Noite</option>
+        <option value="22:00">22:00 - Madrugada</option>
+      </select>
+      <button class="btn btn-primary" onclick="solicitarViagem()">Enviar ao Motorista</button>
+    </div>
+  </div>
+
+  <div id="p-encomenda" class="hidden">
+    <div class="card">
+      <h3>Enviar Encomenda</h3>
+      <label style="font-size:13px;color:#5a6b8c;">Origem (Cidade - BA)</label>
+      <select id="e-origem"><option value="">Selecione a origem</option></select>
+      <label style="font-size:13px;color:#5a6b8c;">Destino (Cidade - BA)</label>
+      <select id="e-destino"><option value="">Selecione o destino</option></select>
+      <label style="font-size:13px;color:#5a6b8c;">Tamanho da encomenda</label>
+      <select id="e-tamanho">
+        <option value="">Selecione o tamanho</option>
+        <option value="Pequeno">Pequeno (até 5kg - ex: documentos)</option>
+        <option value="Médio">Médio (5kg a 20kg - ex: caixa)</option>
+        <option value="Grande">Grande (20kg+ - ex: volumes grandes)</option>
+      </select>
+      <textarea id="e-desc" placeholder="Descrição do conteúdo" rows="2"></textarea>
+      <button class="btn btn-primary" onclick="enviarEncomenda()">Enviar ao Motorista</button>
+    </div>
+  </div>
+
+  <div id="p-rastreamento" class="hidden">
+    <div class="card">
+      <h3>📍 Rastreamento em Tempo Real</h3>
+      <div id="p-track-toggle" class="track-toggle off">
+        <div>
+          <div class="track-status off" id="p-track-status-text">Rastreamento desligado</div>
+          <small style="color:#5a6b8c;">Permita que o motorista veja sua localização</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="p-track-switch" onchange="toggleRastreamento('passageiro')">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="p-track-info" style="font-size:13px;color:#5a6b8c;margin:8px 0;">
+        Aguardando uma viagem ativa para iniciar o rastreamento.
+      </div>
+      <div id="map-passageiro" style="display:none;">
+        <div id="map-p"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="p-minhas" class="hidden">
+    <div class="card">
+      <h3>Minhas Solicitações</h3>
+      <ul id="lista-solicitacoes-p" class="item-list"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- PAINEL MOTORISTA -->
+<div id="screen-motorista" class="screen hidden">
+  <div class="topbar">
+    <span>🚗 <span id="m-nome-display"></span></span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="notif-container" onclick="mostrarNotificacoes()">
+        <span class="notif-bell">🔔</span>
+        <span id="notif-badge" class="notif-badge hidden">0</span>
+      </div>
+      <button class="btn btn-back" onclick="sairMotorista()">Sair</button>
+    </div>
+  </div>
+  
+  <div id="painel-notif" class="card hidden" style="border:2px solid #f39c12;">
+    <h3>🔔 Novas Solicitações</h3>
+    <ul id="lista-notificacoes" class="item-list"></ul>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="tabM('solicitacoes',this)">📨 Solicitações</button>
+    <button class="tab" onclick="tabM('rastreamento',this)">📍 Rastreamento</button>
+    <button class="tab" onclick="tabM('minhas',this)">📋 Ativas</button>
+    <button class="tab" onclick="tabM('config',this)">️ Config</button>
+  </div>
+
+  <div id="m-solicitacoes">
+    <div class="card">
+      <h3>Todas as Solicitações</h3>
+      <ul id="lista-solicitacoes-m" class="item-list"></ul>
+    </div>
+  </div>
+
+  <div id="m-rastreamento" class="hidden">
+    <div class="card">
+      <h3>📍 Rastreamento em Tempo Real</h3>
+      <div id="m-track-toggle" class="track-toggle off">
+        <div>
+          <div class="track-status off" id="m-track-status-text">Rastreamento desligado</div>
+          <small style="color:#5a6b8c;">Compartilhe sua localização com o passageiro</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="m-track-switch" onchange="toggleRastreamento('motorista')">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="m-track-info" style="font-size:13px;color:#5a6b8c;margin:8px 0;">
+        Aguardando uma viagem ativa para iniciar o rastreamento.
+      </div>
+      <div id="map-motorista" style="display:none;">
+        <div id="map-m"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="m-minhas" class="hidden">
+    <div class="card">
+      <h3>Viagens / Encomendas Ativas</h3>
+      <ul id="lista-ativas" class="item-list"></ul>
+    </div>
+  </div>
+
+  <div id="m-config" class="hidden">
+    <div class="card">
+      <h3>Opções da Conta</h3>
+      <button class="btn btn-secondary" onclick="editarPerfilMotorista()">️ Editar Perfil</button>
+      <button class="btn btn-danger" onclick="apagarContaMotorista()">🗑️ Apagar Conta</button>
+      <button class="btn btn-secondary" onclick="sairMotorista()">🚪 Sair</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE ENVIO DE MENSAGEM -->
+<div id="modal-mensagem" class="screen hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9998;max-width:100%;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div class="card" style="width:100%;max-width:450px;">
+    <h3>📱 Enviar mensagem ao passageiro</h3>
+    <p style="font-size:13px;color:#5a6b8c;margin:10px 0;">A mensagem abaixo será enviada para <b id="msg-destino"></b></p>
+    <textarea id="msg-texto" rows="6" style="font-size:13px;"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-whatsapp" onclick="enviarViaWhatsApp()">📲 WhatsApp</button>
+      <button class="btn btn-sms" onclick="enviarViaSMS()">💬 SMS</button>
+    </div>
+    <button class="btn btn-secondary" onclick="fecharModalMensagem()">Cancelar</button>
+  </div>
+</div>
+
+<!-- TELA DE AVALIAÇÃO -->
+<div id="screen-avaliacao" class="screen hidden">
+  <button class="btn btn-back" onclick="voltarDaAvaliacao()">← Voltar</button>
+  <h2 style="margin:15px 0;">⭐ Avaliar</h2>
+  <div class="card">
+    <p id="av-texto" style="margin-bottom:10px;"></p>
+    <div class="stars" id="av-stars">
+      <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+    </div>
+    <textarea id="av-comentario" placeholder="Comentário (opcional)" rows="3"></textarea>
+    <button class="btn btn-primary" onclick="enviarAvaliacao()">Enviar Avaliação</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ========== BANCO DE DADOS LOCAL ========== */
+const DB_KEY = 'movex_db_v2';
+let DB = { motoristas: [], solicitacoes: [], avaliacoes: [], ativas: [] };
+let motoristaAtual = null;
+let passageiroAtual = null;
+let avaliacaoAlvo = null;
+let avaliacaoValor = 0;
+let telaAntesAvaliacao = 'screen-home';
+let notificacoesNaoLidas = 0;
+let mensagemPendente = null;
+let motoristaEsqueciSenha = null;
+const canal = new BroadcastChannel('movex_channel');
+
+let watchId = null;
+let minhaPosicao = null;
+let mapP = null, mapM = null;
+let markerMinhaPos = null, markerOutraPos = null;
+let trackInterval = null;
+
+function carregarDB() {
+  try {
+    const saved = localStorage.getItem(DB_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      DB = {
+        motoristas: Array.isArray(parsed.motoristas) ? parsed.motoristas : [],
+        solicitacoes: Array.isArray(parsed.solicitacoes) ? parsed.solicitacoes : [],
+        avaliacoes: Array.isArray(parsed.avaliacoes) ? parsed.avaliacoes : [],
+        ativas: Array.isArray(parsed.ativas) ? parsed.ativas : []
+      };
+    } else {
+      DB = { motoristas: [], solicitacoes: [], avaliacoes: [], ativas: [] };
+      salvarDB();
+    }
+  } catch(e) {
+    DB = { motoristas: [], solicitacoes: [], avaliacoes: [], ativas: [] };
+    localStorage.removeItem(DB_KEY);
+    salvarDB();
+  }
+}
+
+function salvarDB() { 
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(DB));
+    return true;
+  } catch(e) { return false; }
+}
+
+/* ========== ESQUECI A SENHA ========== */
+function abrirEsqueciSenha() {
+  motoristaEsqueciSenha = null;
+  document.getElementById('esq-user').value = '';
+  document.getElementById('esq-msg').innerHTML = '';
+  document.getElementById('esq-resultado').classList.add('hidden');
+  document.getElementById('esq-resultado').innerHTML = '';
+  document.getElementById('modal-esqueci-senha').classList.remove('hidden');
+}
+
+function fecharEsqueciSenha() {
+  document.getElementById('modal-esqueci-senha').classList.add('hidden');
+  motoristaEsqueciSenha = null;
+}
+
+function buscarMotoristaEsqueci() {
+  const user = document.getElementById('esq-user').value.trim();
+  const msgEl = document.getElementById('esq-msg');
+  const resEl = document.getElementById('esq-resultado');
+  
+  if (!user) {
+    msgEl.innerHTML = '<div class="msg msg-error">Informe seu usuário.</div>';
+    resEl.classList.add('hidden');
+    return false;
+  }
+  
+  carregarDB();
+  const m = DB.motoristas.find(x => x.user.toLowerCase() === user.toLowerCase());
+  
+  if (!m) {
+    msgEl.innerHTML = '<div class="msg msg-error">Usuário não encontrado.</div>';
+    resEl.classList.add('hidden');
+    motoristaEsqueciSenha = null;
+    return false;
+  }
+  
+  motoristaEsqueciSenha = m;
+  msgEl.innerHTML = '<div class="msg msg-success">✅ Motorista encontrado: <b>' + m.nome + '</b></div>';
+  
+  const telMascarado = m.tel.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3');
+  resEl.classList.remove('hidden');
+  resEl.innerHTML = `
+    <div style="background:#e8f5e9;padding:10px;border-radius:8px;margin:8px 0;font-size:13px;">
+       A senha será enviada para: <b>${telMascarado}</b><br>
+      <small style="color:#5a6b8c;">O app de SMS abrirá com a mensagem pronta.</small>
+    </div>
+  `;
+  return true;
+}
+
+function enviarSenhaSMS() {
+  if (!buscarMotoristaEsqueci()) return;
+  
+  const m = motoristaEsqueciSenha;
+  const telNumeros = m.tel.replace(/\D/g, '');
+  let telFormatado = telNumeros;
+  if (telFormatado.startsWith('0')) telFormatado = telFormatado.substring(1);
+  if (telFormatado.length === 10 || telFormatado.length === 11) {
+    telFormatado = '55' + telFormatado;
+  }
+  
+  const texto = `MOVEX - Ouxe Transportes\n\nOlá ${m.nome}!\n\nSua senha de acesso é: ${m.pass}\n\nGuarde com segurança e não compartilhe com ninguém.\n\nEquipe MOVEX`;
+  
+  const url = `sms:+${telFormatado}?body=${encodeURIComponent(texto)}`;
+  window.location.href = url;
+  
+  document.getElementById('esq-msg').innerHTML = '<div class="msg msg-success">📲 App de SMS aberto! Envie a mensagem para você mesmo.</div>';
+  showToast('✅ SMS pronto para envio!');
+}
+
+/* ========== RASTREAMENTO ========== */
+function toggleRastreamento(tipo) {
+  const switchEl = document.getElementById(tipo === 'passageiro' ? 'p-track-switch' : 'm-track-switch');
+  const toggleEl = document.getElementById(tipo === 'passageiro' ? 'p-track-toggle' : 'm-track-toggle');
+  const statusEl = document.getElementById(tipo === 'passageiro' ? 'p-track-status-text' : 'm-track-status-text');
+  const mapDiv = document.getElementById(tipo === 'passageiro' ? 'map-passageiro' : 'map-motorista');
+  const infoEl = document.getElementById(tipo === 'passageiro' ? 'p-track-info' : 'm-track-info');
+  const mapContainer = document.getElementById(tipo === 'passageiro' ? 'map-p' : 'map-m');
+
+  if (switchEl.checked) {
+    const viagemAtiva = getViagemAtiva(tipo);
+    if (!viagemAtiva) {
+      switchEl.checked = false;
+      alert('Você precisa ter uma viagem ativa para usar o rastreamento.');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      switchEl.checked = false;
+      alert('Seu navegador não suporta geolocalização.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        minhaPosicao = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        toggleEl.classList.remove('off');
+        statusEl.textContent = 'Rastreamento ativo';
+        statusEl.classList.remove('off');
+        statusEl.classList.add('on');
+        mapDiv.style.display = 'block';
+        infoEl.textContent = '📡 Compartilhando localização em tempo real';
+        
+        setTimeout(() => {
+          iniciarMapa(tipo, mapContainer);
+          trackInterval = setInterval(() => atualizarPosicao(tipo), 5000);
+          atualizarPosicao(tipo);
+        }, 300);
+
+        showToast('✅ Rastreamento ativado!');
+      },
+      (err) => {
+        switchEl.checked = false;
+        alert('Não foi possível obter sua localização: ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  } else {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    if (trackInterval) {
+      clearInterval(trackInterval);
+      trackInterval = null;
+    }
+    minhaPosicao = null;
+    toggleEl.classList.add('off');
+    statusEl.textContent = 'Rastreamento desligado';
+    statusEl.classList.remove('on');
+    statusEl.classList.add('off');
+    mapDiv.style.display = 'none';
+    infoEl.textContent = 'Aguardando uma viagem ativa para iniciar o rastreamento.';
+    
+    if (mapP) { mapP.remove(); mapP = null; }
+    if (mapM) { mapM.remove(); mapM = null; }
+    markerMinhaPos = null;
+    markerOutraPos = null;
+    
+    showToast('🔒 Rastreamento desligado');
+  }
+}
+
+function getViagemAtiva(tipo) {
+  carregarDB();
+  if (tipo === 'passageiro' && passageiroAtual) {
+    return DB.ativas.find(a => a.passageiro === passageiroAtual.nome && a.status !== 'concluida');
+  }
+  if (tipo === 'motorista' && motoristaAtual) {
+    return DB.ativas.find(a => a.motorista === motoristaAtual.nome && a.status !== 'concluida');
+  }
+  return null;
+}
+
+function iniciarMapa(tipo, container) {
+  const map = L.map(container).setView([minhaPosicao.lat, minhaPosicao.lng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  const minhaIcon = L.divIcon({
+    html: `<div style="background:#1a8a5c;color:#fff;padding:6px 10px;border-radius:20px;font-weight:bold;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.3);">📍 Eu</div>`,
+    iconSize: [60, 30],
+    iconAnchor: [30, 15]
+  });
+
+  markerMinhaPos = L.marker([minhaPosicao.lat, minhaPosicao.lng], { icon: minhaIcon }).addTo(map);
+  markerMinhaPos.bindPopup(`<b>Você</b><br>${tipo === 'passageiro' ? 'Passageiro' : 'Motorista'}`).openPopup();
+
+  if (tipo === 'passageiro') mapP = map;
+  else mapM = map;
+}
+
+function atualizarPosicao(tipo) {
+  if (!minhaPosicao) return;
+  
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      minhaPosicao = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      
+      if (markerMinhaPos) {
+        markerMinhaPos.setLatLng([minhaPosicao.lat, minhaPosicao.lng]);
+      }
+      
+      carregarDB();
+      const viagemAtiva = getViagemAtiva(tipo);
+      if (viagemAtiva) {
+        viagemAtiva.posicaoAtual = minhaPosicao;
+        viagemAtiva.ultimoUpdate = Date.now();
+        salvarDB();
+        canal.postMessage({ tipo: 'atualizacao_posicao', viagemId: viagemAtiva.id, posicao: minhaPosicao, de: tipo });
+      }
+    },
+    (err) => console.warn('Erro geolocalização:', err),
+    { enableHighAccuracy: true, timeout: 5000 }
+  );
+}
+
+function atualizarMapaComOutraPosicao(tipo, posicao) {
+  const map = tipo === 'passageiro' ? mapP : mapM;
+  if (!map) return;
+  
+  const outraIcon = L.divIcon({
+    html: `<div style="background:#0d3b66;color:#fff;padding:6px 10px;border-radius:20px;font-weight:bold;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.3);"> ${tipo === 'passageiro' ? 'Motorista' : 'Passageiro'}</div>`,
+    iconSize: [80, 30],
+    iconAnchor: [40, 15]
+  });
+
+  if (!markerOutraPos) {
+    markerOutraPos = L.marker([posicao.lat, posicao.lng], { icon: outraIcon }).addTo(map);
+    markerOutraPos.bindPopup(`<b>${tipo === 'passageiro' ? 'Motorista' : 'Passageiro'}</b><br>Localização em tempo real`);
+  } else {
+    markerOutraPos.setLatLng([posicao.lat, posicao.lng]);
+  }
+  
+  if (markerMinhaPos && markerOutraPos) {
+    const group = L.featureGroup([markerMinhaPos, markerOutraPos]);
+    map.fitBounds(group.getBounds().pad(0.3));
+  }
+}
+
+/* ========== FORMATAÇÃO DE TELEFONE ========== */
+function formatarTelefone(tel) {
+  if (!tel) return null;
+  let numeros = tel.replace(/\D/g, '');
+  if (numeros.startsWith('0')) numeros = numeros.substring(1);
+  if (numeros.length === 10 || numeros.length === 11) {
+    numeros = '55' + numeros;
+  }
+  if (numeros.length < 12 || numeros.length > 13) {
+    return null;
+  }
+  return numeros;
+}
+
+/* ========== ENVIO DE MENSAGENS ========== */
+function abrirModalMensagem(tel, texto) {
+  mensagemPendente = { tel, texto };
+  document.getElementById('msg-destino').textContent = tel;
+  document.getElementById('msg-texto').value = texto;
+  document.getElementById('modal-mensagem').classList.remove('hidden');
+}
+
+function fecharModalMensagem() {
+  document.getElementById('modal-mensagem').classList.add('hidden');
+  mensagemPendente = null;
+}
+
+function enviarViaWhatsApp() {
+  if (!mensagemPendente) return;
+  const tel = mensagemPendente.tel;
+  const texto = document.getElementById('msg-texto').value;
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+  window.open(url, '_blank');
+  fecharModalMensagem();
+  showToast('✅ WhatsApp aberto! Envie a mensagem.');
+}
+
+function enviarViaSMS() {
+  if (!mensagemPendente) return;
+  const tel = mensagemPendente.tel;
+  const texto = document.getElementById('msg-texto').value;
+  const url = `sms:+${tel}?body=${encodeURIComponent(texto)}`;
+  window.location.href = url;
+  fecharModalMensagem();
+  showToast('✅ App de SMS aberto!');
+}
+
+function gerarMensagemAceite(s) {
+  const nomeMotorista = motoristaAtual.nome;
+  const veiculo = motoristaAtual.veiculo || 'não informado';
+  let msg = `Olá ${s.passageiro}! 👋\n\n`;
+  msg += `Sou *${nomeMotorista}*, motorista da *MOVEX - Ouxe Transportes*.\n\n`;
+  msg += `✅ Aceitei sua solicitação:\n`;
+  if (s.tipo === 'viagem') {
+    msg += `🚗 Viagem de *${s.origem}* para *${s.destino}*\n`;
+    msg += `📅 Data: ${s.data} às ${s.hora}\n`;
+    msg += `👥 Passageiros: ${s.pessoas}\n`;
+  } else {
+    msg += `📦 Encomenda de *${s.origem}* para *${s.destino}*\n`;
+    msg += ` Tamanho: ${s.tamanho}\n`;
+    if (s.descricao) msg += ` Descrição: ${s.descricao}\n`;
+  }
+  msg += `🚘 Meu veículo: ${veiculo}\n\n`;
+  msg += `Entrarei em contato em breve para confirmar os detalhes. Obrigado!`;
+  return msg;
+}
+
+/* ========== PAINEL SECRETO ========== */
+function diagnosticoDB() {
+  carregarDB();
+  const debugEl = document.getElementById('debug-info');
+  debugEl.classList.remove('hidden');
+  debugEl.innerHTML = `
+    <div class="debug-box">
+      <strong>🔍 Painel Administrativo (Secreto)</strong><br><br>
+      Motoristas cadastrados: <b>${DB.motoristas.length}</b><br>
+      Solicitações no sistema: <b>${DB.solicitacoes.length}</b><br>
+      Avaliações registradas: <b>${DB.avaliacoes.length}</b><br>
+      Viagens ativas: <b>${DB.ativas.length}</b><br><br>
+      <button onclick="limparDB()" style="padding:8px 16px;background:#c0392b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🗑️ Limpar Tudo</button>
+      <button onclick="document.getElementById('debug-info').classList.add('hidden')" style="padding:8px 16px;background:#7f8c8d;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-left:5px;font-weight:bold;">Fechar</button>
+    </div>
+  `;
+}
+
+function limparDB() {
+  if(confirm('⚠️ ATENÇÃO: Tem certeza que deseja apagar TODOS os dados?')) {
+    if(confirm('Esta ação é irreversível. Confirmar?')) {
+      localStorage.removeItem(DB_KEY);
+      DB = { motoristas: [], solicitacoes: [], avaliacoes: [], ativas: [] };
+      alert('Banco de dados limpo!');
+      location.reload();
+    }
+  }
+}
+
+/* ========== CIDADES DA BAHIA ========== */
+const cidadesBA = [
+  "Abaré", "Abaira", "Alcobaça", "Alagoinhas", "Amélia Rodrigues", "Anagé", "Andaraí", "Antônio Cardoso", "Aporá", "Aratuípe", 
+  "Barra do Choça", "Barra do Mendes", "Barreiras", "Belo Campo", "Bom Jesus da Lapa", "Boa Vista do Tupim", "Brumado", "Buerarema", 
+  "Cabaceiras do Paraguaçu", "Cachoeira", "Caculé", "Caetité", "Camaçari", "Camamu", "Campo Alegre de Lourdes", "Campo Formoso", 
+  "Candeias", "Cansanção", "Canudos", "Capim Grosso", "Caravelas", "Cardeal da Silva", "Castro Alves", "Catu", "Caatiba", 
+  "Cícero Dantas", "Conceição do Almeida", "Conceição do Coité", "Conde", "Coribe", "Correntina", "Cruz das Almas", "Curaçá", 
+  "Dias d'Ávila", "Entre Rios", "Euclides da Cunha", "Eunápolis", 
+  "Fátima", "Feira da Mata", "Feira de Santana", 
+  "Guanambi", "Heliópolis", 
+  "Ibipeba", "Ibirapitanga", "Ibirataia", "Ibitiara", "Ibititá", "Ibotirama", "Iguaí", "Ilhéus", "Inhambupe", "Ipirá", "Ipiaú", "Iraquara", "Irecê", "Itabuna", "Itaberaba", "Itacaré", "Itagibá", "Itamaraju", "Itambé", "Itanagra", "Itaparica", "Itapetinga", "Itatim", "Itiruçu", "Itiúba", "Itororó", "Ituaçu", "Ituberá", "Iuiú", 
+  "Jaguaquara", "Jaguarari", "Jandaíra", "Jequié", "Jeremoabo", "Jiquiriçá", "Juazeiro", "Jussara", 
+  "Lafaiete Coutinho", "Lauro de Freitas", "Lençóis", "Luís Eduardo Magalhães", 
+  "Macaúbas", "Madre de Deus", "Malhada", "Maragogipe", "Mata de São João", "Medeiros Neto", "Miguel Calmon", "Monte Santo", "Morro do Chapéu", "Mucugê", "Mucuri", "Muritiba", 
+  "Nazaré", "Nova Canaã", "Nova Itarana", "Nova Viçosa", "Novo Triunfo", 
+  "Oliveira dos Brejinhos", "Ouriçangas", "Ourolândia", 
+  "Palmeiras", "Paratinga", "Paripiranga", "Pau Brasil", "Paulo Afonso", "Piatã", "Pilão Arcado", "Pindaí", "Pindobaçu", "Piripá", "Poções", "Porto Seguro", "Prado", 
+  "Queimadas", "Quijingue", 
+  "Remanso", "Riacho de Santana", "Ribeira do Amparo", "Ribeira do Pombal", "Rio de Contas", "Rio do Pires", "Rodelas", "Ruy Barbosa", 
+  "Salinas da Margarida", "Salvador", "Santa Bárbara", "Santa Brígida", "Santa Cruz Cabrália", "Santa Maria da Vitória", "Santa Rita de Cássia", "Santaluz", "Santana", "Santo Amaro", "Santo Antônio de Jesus", "São Desidério", "São Felipe", "São Félix", "São Francisco do Conde", "São Gonçalo dos Campos", "São Sebastião do Passé", "Sapeaçu", "Seabra", "Sento Sé", "Senhor do Bonfim", "Serrinha", "Simões Filho", "Sobradinho", 
+  "Tanque Novo", "Tanquinho", "Taperoá", "Teixeira de Freitas", "Teolândia", "Terra Nova", "Tremedal", "Tucano", 
+  "Ubaíra", "Uibaí", "Umburanas", "Una", "Urandi", "Utinga", 
+  "Valença", "Valente", "Várzea do Poço", "Várzea Nova", "Vera Cruz", "Vitória da Conquista", 
+  "Wagner", "Wenceslau Guimarães", "Xique-Xique"
+];
+
+function popularCidades() {
+  const selects = ['v-origem', 'v-destino', 'e-origem', 'e-destino'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = '<option value="">Selecione a cidade</option>';
+    cidadesBA.forEach(c => {
+      el.innerHTML += `<option value="${c}">${c} - BA</option>`;
+    });
+  });
+}
+
+/* ========== NAVEGAÇÃO ========== */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  if (id === 'screen-home') atualizarHome();
+  if (id === 'screen-motorista' && motoristaAtual) {
+    listarSolicitacoesM();
+    listarAtivas();
+    atualizarBadgeNotificacao();
+    atualizarInfoRastreamento('motorista');
+  }
+  if (id === 'screen-passageiro' && passageiroAtual) {
+    atualizarInfoRastreamento('passageiro');
+  }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+/* ========== HOME ========== */
+function atualizarHome() {
+  carregarDB();
+  document.getElementById('stat-motoristas').textContent = DB.motoristas.length;
+  const concluidas = DB.solicitacoes.filter(s => s.status === 'concluida').length;
+  document.getElementById('stat-corridas').textContent = concluidas;
+
+  const lista = document.getElementById('avaliacoes-lista');
+  if (DB.avaliacoes.length === 0) {
+    lista.innerHTML = '<p style="font-size:13px;color:#5a6b8c;">Nenhuma avaliação ainda.</p>';
+  } else {
+    lista.innerHTML = DB.avaliacoes.slice(-5).reverse().map(a => `
+      <div class="av-item">
+        <strong>${a.de}</strong> → ${a.para}: ${'★'.repeat(a.valor)}${'☆'.repeat(5 - a.valor)}
+        ${a.comentario ? '<br><em style="color:#5a6b8c;">"' + a.comentario + '"</em>' : ''}
+      </div>`).join('');
+  }
+}
+
+/* ========== PASSAGEIRO ========== */
+function entrarPassageiro() {
+  const nome = document.getElementById('p-nome-input').value.trim();
+  const tel = document.getElementById('p-tel-input').value.trim();
+  const msg = document.getElementById('p-nome-msg');
+  if (!nome) { msg.innerHTML = '<div class="msg msg-error">Informe seu nome.</div>'; return; }
+  if (!tel) { msg.innerHTML = '<div class="msg msg-error">Informe seu telefone.</div>'; return; }
+  const telNumeros = tel.replace(/\D/g, '');
+  if (telNumeros.length < 10) {
+    msg.innerHTML = '<div class="msg msg-error">Telefone inválido. Use DDD + número (ex: 75 99999-9999).</div>';
+    return;
+  }
+  passageiroAtual = { nome, tel };
+  document.getElementById('p-nome-display').textContent = nome;
+  msg.innerHTML = '';
+  show('screen-passageiro');
+  listarSolicitacoesP();
+}
+
+function sairPassageiro() {
+  passageiroAtual = null;
+  document.getElementById('p-nome-input').value = '';
+  document.getElementById('p-tel-input').value = '';
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (trackInterval) { clearInterval(trackInterval); trackInterval = null; }
+  show('screen-home');
+}
+
+/* ========== CADASTRO MOTORISTA ========== */
+function cadastrarMotorista() {
+  const nome = document.getElementById('cad-nome').value.trim();
+  const user = document.getElementById('cad-user').value.trim();
+  const pass = document.getElementById('cad-pass').value;
+  const tel = document.getElementById('cad-tel').value.trim();
+  const veic = document.getElementById('cad-veiculo').value.trim();
+  const msgEl = document.getElementById('cad-msg');
+
+  if (!nome || !user || !pass || !tel || !veic) { 
+    msgEl.innerHTML = '<div class="msg msg-error">⚠️ Preencha TODOS os campos.</div>';
+    return; 
+  }
+  
+  carregarDB();
+  
+  if (DB.motoristas.find(u => u.user.toLowerCase() === user.toLowerCase())) { 
+    msgEl.innerHTML = '<div class="msg msg-error">⚠️ Este usuário já está cadastrado.</div>';
+    return; 
+  }
+  
+  DB.motoristas.push({ 
+    id: Date.now(), nome, user, pass, tel, veiculo: veic,
+    dataCadastro: new Date().toISOString()
+  });
+  
+  if (!salvarDB()) {
+    msgEl.innerHTML = '<div class="msg msg-error">❌ Erro ao salvar.</div>';
+    return;
+  }
+  
+  msgEl.innerHTML = '<div class="msg msg-success">✅ Motorista <b>' + nome + '</b> cadastrado! Redirecionando...</div>';
+  
+  document.getElementById('cad-nome').value = '';
+  document.getElementById('cad-user').value = '';
+  document.getElementById('cad-pass').value = '';
+  document.getElementById('cad-tel').value = '';
+  document.getElementById('cad-veiculo').value = '';
+  
+  setTimeout(() => {
+    show('screen-login');
+    msgEl.innerHTML = '';
+  }, 2000);
+}
+
+/* ========== LOGIN MOTORISTA ========== */
+function fazerLoginMotorista() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const msg = document.getElementById('login-msg');
+  
+  carregarDB();
+  const m = DB.motoristas.find(x => x.user === user && x.pass === pass);
+  if (!m) { 
+    msg.innerHTML = '<div class="msg msg-error">Usuário ou senha inválidos.</div>'; 
+    return; 
+  }
+  
+  motoristaAtual = m;
+  document.getElementById('m-nome-display').textContent = m.nome;
+  msg.innerHTML = '';
+  notificacoesNaoLidas = 0;
+  show('screen-motorista');
+}
+
+function sairMotorista() {
+  motoristaAtual = null;
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (trackInterval) { clearInterval(trackInterval); trackInterval = null; }
+  show('screen-home');
+}
+
+/* ========== PASSAGEIRO: SOLICITAÇÕES ========== */
+function tabP(t, el) {
+  ['viagem', 'encomenda', 'rastreamento', 'minhas'].forEach(x => document.getElementById('p-' + x).classList.add('hidden'));
+  document.getElementById('p-' + t).classList.remove('hidden');
+  el.parentElement.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (t === 'minhas') listarSolicitacoesP();
+  if (t === 'rastreamento') atualizarInfoRastreamento('passageiro');
+}
+
+function solicitarViagem() {
+  const origem = document.getElementById('v-origem').value;
+  const destino = document.getElementById('v-destino').value;
+  const pessoas = document.getElementById('v-pessoas').value;
+  const data = document.getElementById('v-data').value;
+  const hora = document.getElementById('v-hora').value;
+  
+  if (!origem || !destino || !pessoas || !data || !hora) { alert('Preencha todos os campos.'); return; }
+  
+  const sol = {
+    id: Date.now(), tipo: 'viagem',
+    passageiro: passageiroAtual.nome, telefone: passageiroAtual.tel,
+    pessoas, origem, destino, data, hora,
+    status: 'pendente', motorista: null, avaliado: false, lida: false
+  };
+  
+  carregarDB();
+  DB.solicitacoes.push(sol);
+  salvarDB();
+  canal.postMessage({ tipo: 'nova_solicitacao', solicitacao: sol });
+  showToast('✅ Solicitação enviada ao motorista!');
+  
+  document.getElementById('v-origem').value = '';
+  document.getElementById('v-destino').value = '';
+  document.getElementById('v-pessoas').value = '1';
+  document.getElementById('v-data').value = '';
+  document.getElementById('v-hora').value = '';
+}
+
+function enviarEncomenda() {
+  const origem = document.getElementById('e-origem').value;
+  const destino = document.getElementById('e-destino').value;
+  const tamanho = document.getElementById('e-tamanho').value;
+  const desc = document.getElementById('e-desc').value.trim();
+  
+  if (!origem || !destino || !tamanho) { alert('Preencha os campos obrigatórios.'); return; }
+  
+  const sol = {
+    id: Date.now(), tipo: 'encomenda',
+    passageiro: passageiroAtual.nome, telefone: passageiroAtual.tel,
+    origem, destino, tamanho, descricao: desc,
+    status: 'pendente', motorista: null, avaliado: false, lida: false
+  };
+  
+  carregarDB();
+  DB.solicitacoes.push(sol);
+  salvarDB();
+  canal.postMessage({ tipo: 'nova_solicitacao', solicitacao: sol });
+  showToast('✅ Encomenda enviada ao motorista!');
+  
+  document.getElementById('e-origem').value = '';
+  document.getElementById('e-destino').value = '';
+  document.getElementById('e-tamanho').value = '';
+  document.getElementById('e-desc').value = '';
+}
+
+function listarSolicitacoesP() {
+  const lista = document.getElementById('lista-solicitacoes-p');
+  const minhas = DB.solicitacoes.filter(s => s.passageiro === passageiroAtual.nome);
+  if (minhas.length === 0) { lista.innerHTML = '<li>Nenhuma solicitação.</li>'; return; }
+  lista.innerHTML = minhas.map(s => `
+    <li>
+      <div>
+        <strong>${s.tipo === 'viagem' ? ' Viagem' : '📦 Encomenda'}</strong><br>
+        <small>${s.origem} → ${s.destino}</small><br>
+        <small>${s.tipo === 'viagem' ? s.pessoas + ' passageiro(s) | ' + s.data + ' ' + s.hora : 'Tamanho: ' + s.tamanho}</small><br>
+        <small>Motorista: <b>${s.motorista || 'Aguardando...'}</b></small><br>
+        <span class="badge">${s.status}</span>
+      </div>
+      ${s.status === 'concluida' && !s.avaliado ? `<button class="btn btn-primary" style="width:auto;padding:6px 12px;font-size:12px;" onclick="abrirAvaliacao(${s.id},'motorista')">Avaliar</button>` : ''}
+      ${s.avaliado ? '<span class="badge" style="background:#f39c12;">Avaliado ✓</span>' : ''}
+    </li>`).join('');
+}
+
+/* ========== MOTORISTA ========== */
+function tabM(t, el) {
+  ['solicitacoes', 'rastreamento', 'minhas', 'config'].forEach(x => document.getElementById('m-' + x).classList.add('hidden'));
+  document.getElementById('m-' + t).classList.remove('hidden');
+  el.parentElement.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (t === 'solicitacoes') { listarSolicitacoesM(); document.getElementById('painel-notif').classList.add('hidden'); }
+  if (t === 'minhas') listarAtivas();
+  if (t === 'rastreamento') atualizarInfoRastreamento('motorista');
+}
+
+function atualizarBadgeNotificacao() {
+  carregarDB();
+  const naoLidas = DB.solicitacoes.filter(s => s.status === 'pendente' && !s.lida).length;
+  notificacoesNaoLidas = naoLidas;
+  const badge = document.getElementById('notif-badge');
+  if (naoLidas > 0) {
+    badge.textContent = naoLidas;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function mostrarNotificacoes() {
+  const painel = document.getElementById('painel-notif');
+  painel.classList.toggle('hidden');
+  if (!painel.classList.contains('hidden')) {
+    const lista = document.getElementById('lista-notificacoes');
+    const pendentes = DB.solicitacoes.filter(s => s.status === 'pendente' && !s.lida);
+    if (pendentes.length === 0) {
+      lista.innerHTML = '<li>Nenhuma notificação nova.</li>';
+    } else {
+      lista.innerHTML = pendentes.map(s => `
+        <li>
+          <div>
+            <strong>${s.tipo === 'viagem' ? '🚗 Viagem' : '📦 Encomenda'}</strong><br>
+            <small>De: <b>${s.passageiro}</b> (${s.pessoas || s.tamanho})</small><br>
+            <small>${s.origem} → ${s.destino}</small>
+          </div>
+        </li>`).join('');
+    }
+    pendentes.forEach(s => s.lida = true);
+    salvarDB();
+    atualizarBadgeNotificacao();
+  }
+}
+
+function listarSolicitacoesM() {
+  const lista = document.getElementById('lista-solicitacoes-m');
+  carregarDB();
+  const pendentes = DB.solicitacoes.filter(s => s.status === 'pendente');
+  if (pendentes.length === 0) { lista.innerHTML = '<li>Nenhuma solicitação pendente.</li>'; return; }
+  lista.innerHTML = pendentes.map(s => `
+    <li>
+      <div>
+        <strong>${s.tipo === 'viagem' ? '🚗 Viagem' : '📦 Encomenda'}</strong> ${!s.lida ? '<span style="color:red;font-size:10px;">● NOVO</span>' : ''}<br>
+        <small>Passageiro: <b>${s.passageiro}</b> ${s.pessoas ? '(' + s.pessoas + ' pessoa(s))' : ''}</small><br>
+        <small>${s.origem} → ${s.destino}</small><br>
+        <small>${s.tipo === 'viagem' ? s.data + ' às ' + s.hora : 'Tamanho: ' + s.tamanho}</small><br>
+        <small>📱 ${s.telefone}</small>
+      </div>
+      <div>
+        <button class="btn btn-primary" style="width:auto;padding:6px 10px;font-size:12px;" onclick="aceitarSolicitacao(${s.id})">Aceitar</button>
+        <button class="btn btn-danger" style="width:auto;padding:6px 10px;font-size:12px;" onclick="recusarSolicitacao(${s.id})">Recusar</button>
+      </div>
+    </li>`).join('');
+}
+
+/* ========== ACEITAR SOLICITAÇÃO + ENVIO DE MENSAGEM ========== */
+function aceitarSolicitacao(id) {
+  carregarDB();
+  const s = DB.solicitacoes.find(x => x.id === id);
+  if (!s) return;
+  
+  const telFormatado = formatarTelefone(s.telefone);
+  if (!telFormatado) {
+    alert('⚠️ Telefone do passageiro inválido. Não é possível enviar mensagem.');
+    return;
+  }
+  
+  s.status = 'aceita';
+  s.motorista = motoristaAtual.nome;
+  s.lida = true;
+  DB.ativas.push(s);
+  salvarDB();
+  
+  const mensagem = gerarMensagemAceite(s);
+  abrirModalMensagem(telFormatado, mensagem);
+  
+  canal.postMessage({ tipo: 'solicitacao_aceita', id: s.id, motorista: motoristaAtual.nome });
+  
+  listarSolicitacoesM();
+  listarAtivas();
+  atualizarBadgeNotificacao();
+}
+
+function recusarSolicitacao(id) {
+  carregarDB();
+  const s = DB.solicitacoes.find(x => x.id === id);
+  if (!s) return;
+  s.status = 'recusada';
+  s.lida = true;
+  salvarDB();
+  showToast('Solicitação recusada.');
+  listarSolicitacoesM();
+  atualizarBadgeNotificacao();
+}
+
+function listarAtivas() {
+  const lista = document.getElementById('lista-ativas');
+  carregarDB();
+  const ativas = DB.ativas.filter(a => a.motorista === motoristaAtual.nome && a.status !== 'concluida');
+  if (ativas.length === 0) { lista.innerHTML = '<li>Nenhuma viagem ativa.</li>'; return; }
+  lista.innerHTML = ativas.map(s => `
+    <li>
+      <div>
+        <strong>${s.tipo === 'viagem' ? '🚗 Viagem' : '📦 Encomenda'}</strong><br>
+        <small>Passageiro: <b>${s.passageiro}</b> ${s.pessoas ? '(' + s.pessoas + ' pessoa(s))' : ''}</small><br>
+        <small>${s.origem} → ${s.destino}</small><br>
+        <small>📱 ${s.telefone}</small>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" style="width:auto;padding:6px 10px;font-size:12px;" onclick="reenviarMensagem(${s.id})"> Reenviar</button>
+        <button class="btn btn-primary" style="width:auto;padding:6px 10px;font-size:12px;" onclick="concluirViagem(${s.id})">Concluir</button>
+      </div>
+    </li>`).join('');
+}
+
+function reenviarMensagem(id) {
+  carregarDB();
+  const s = DB.solicitacoes.find(x => x.id === id);
+  if (!s) return;
+  const telFormatado = formatarTelefone(s.telefone);
+  if (!telFormatado) {
+    alert('Telefone inválido.');
+    return;
+  }
+  const mensagem = gerarMensagemAceite(s);
+  abrirModalMensagem(telFormatado, mensagem);
+}
+
+function concluirViagem(id) {
+  carregarDB();
+  const s = DB.ativas.find(x => x.id === id);
+  if (!s) return;
+  s.status = 'concluida';
+  salvarDB();
+  const switchM = document.getElementById('m-track-switch');
+  if (switchM && switchM.checked) {
+    switchM.checked = false;
+    toggleRastreamento('motorista');
+  }
+  abrirAvaliacaoPara(s, 'passageiro');
+  listarAtivas();
+}
+
+/* ========== INFO RASTREAMENTO ========== */
+function atualizarInfoRastreamento(tipo) {
+  const infoEl = document.getElementById(tipo === 'passageiro' ? 'p-track-info' : 'm-track-info');
+  const switchEl = document.getElementById(tipo === 'passageiro' ? 'p-track-switch' : 'm-track-switch');
+  const viagemAtiva = getViagemAtiva(tipo);
+  
+  if (!viagemAtiva) {
+    infoEl.innerHTML = '⚠️ Você precisa ter uma viagem ativa para usar o rastreamento.<br>Aceite uma solicitação (motorista) ou aguarde o motorista aceitar (passageiro).';
+    if (switchEl) switchEl.checked = false;
+    return;
+  }
+  
+  const outraParte = tipo === 'passageiro' ? viagemAtiva.motorista : viagemAtiva.passageiro;
+  infoEl.innerHTML = `🚗 Viagem ativa com <b>${outraParte}</b>.<br>Ligue o rastreamento para compartilhar sua localização.`;
+}
+
+/* ========== AVALIAÇÃO ========== */
+function abrirAvaliacao(id, tipoAvaliado) {
+  carregarDB();
+  const s = DB.solicitacoes.find(x => x.id === id);
+  if (!s) return;
+  avaliacaoAlvo = { solicitacao: s, tipo: tipoAvaliado };
+  document.getElementById('av-texto').textContent = `Avalie o ${tipoAvaliado === 'motorista' ? 'motorista' : 'passageiro'}: ${tipoAvaliado === 'motorista' ? (s.motorista || 'Motorista') : s.passageiro}`;
+  document.querySelectorAll('#av-stars span').forEach(st => st.classList.remove('active'));
+  avaliacaoValor = 0;
+  telaAntesAvaliacao = 'screen-passageiro';
+  show('screen-avaliacao');
+}
+
+function abrirAvaliacaoPara(s, tipoAvaliado) {
+  avaliacaoAlvo = { solicitacao: s, tipo: tipoAvaliado };
+  document.getElementById('av-texto').textContent = `Avalie o ${tipoAvaliado}: ${tipoAvaliado === 'passageiro' ? s.passageiro : (s.motorista || 'Motorista')}`;
+  document.querySelectorAll('#av-stars span').forEach(st => st.classList.remove('active'));
+  avaliacaoValor = 0;
+  telaAntesAvaliacao = 'screen-motorista';
+  show('screen-avaliacao');
+}
+
+document.querySelectorAll('#av-stars span').forEach(st => {
+  st.addEventListener('click', () => {
+    avaliacaoValor = parseInt(st.dataset.v);
+    document.querySelectorAll('#av-stars span').forEach((x, i) => {
+      x.classList.toggle('active', i < avaliacaoValor);
+    });
+  });
+});
+
+function enviarAvaliacao() {
+  if (avaliacaoValor === 0) { alert('Selecione as estrelas.'); return; }
+  const com = document.getElementById('av-comentario').value.trim();
+  const de = (motoristaAtual && motoristaAtual.nome) || (passageiroAtual && passageiroAtual.nome) || 'Anônimo';
+  const para = avaliacaoAlvo.tipo === 'motorista' ? (avaliacaoAlvo.solicitacao.motorista || 'Motorista') : avaliacaoAlvo.solicitacao.passageiro;
+  
+  carregarDB();
+  DB.avaliacoes.push({ de, para, valor: avaliacaoValor, comentario: com, data: Date.now() });
+  const sol = DB.solicitacoes.find(x => x.id === avaliacaoAlvo.solicitacao.id);
+  if (sol) sol.avaliado = true;
+  salvarDB();
+  
+  showToast('✅ Avaliação enviada!');
+  document.getElementById('av-comentario').value = '';
+  show(telaAntesAvaliacao);
+}
+
+function voltarDaAvaliacao() { show(telaAntesAvaliacao); }
+
+/* ========== MOTORISTA: EDITAR / APAGAR ========== */
+function editarPerfilMotorista() {
+  const novoNome = prompt('Novo nome:', motoristaAtual.nome);
+  if (novoNome && novoNome.trim()) {
+    carregarDB();
+    const m = DB.motoristas.find(x => x.user === motoristaAtual.user);
+    if (m) { m.nome = novoNome.trim(); salvarDB(); motoristaAtual.nome = m.nome; }
+    document.getElementById('m-nome-display').textContent = motoristaAtual.nome;
+    showToast('Perfil atualizado.');
+  }
+}
+
+function apagarContaMotorista() {
+  if (!confirm('Tem certeza que deseja apagar sua conta?')) return;
+  const senha = prompt('Digite sua senha para confirmar:');
+  if (senha !== motoristaAtual.pass) { alert('Senha incorreta.'); return; }
+  carregarDB();
+  DB.motoristas = DB.motoristas.filter(u => u.user !== motoristaAtual.user);
+  salvarDB();
+  showToast('Conta apagada.');
+  sairMotorista();
+}
+
+/* ========== SINCRONIZAÇÃO ========== */
+canal.onmessage = (event) => {
+  if (event.data.tipo === 'nova_solicitacao' && motoristaAtual) {
+    carregarDB();
+    atualizarBadgeNotificacao();
+    if (document.getElementById('screen-motorista').classList.contains('hidden') === false) {
+      listarSolicitacoesM();
+      showToast('🔔 Nova solicitação recebida!');
+    }
+  }
+  if (event.data.tipo === 'solicitacao_aceita' && passageiroAtual) {
+    if (document.getElementById('screen-passageiro').classList.contains('hidden') === false) {
+      listarSolicitacoesP();
+      atualizarInfoRastreamento('passageiro');
+    }
+  }
+  if (event.data.tipo === 'atualizacao_posicao') {
+    const tipoAtual = motoristaAtual ? 'motorista' : (passageiroAtual ? 'passageiro' : null);
+    if (!tipoAtual) return;
+    const viagemAtiva = getViagemAtiva(tipoAtual);
+    if (!viagemAtiva || viagemAtiva.id !== event.data.viagemId) return;
+    if (event.data.de !== tipoAtual) {
+      atualizarMapaComOutraPosicao(tipoAtual, event.data.posicao);
+    }
+  }
+};
+
+window.addEventListener('storage', (e) => {
+  if (e.key === DB_KEY && motoristaAtual) {
+    carregarDB();
+    atualizarBadgeNotificacao();
+    if (!document.getElementById('screen-motorista').classList.contains('hidden')) {
+      listarSolicitacoesM();
+      listarAtivas();
+    }
+  }
+});
+
+/* ========== PROTEÇÃO CONTRA INSPEÇÃO ========== */
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) || (e.ctrlKey && e.key === 'u')) {
+    e.preventDefault();
+  }
+});
+
+/* ========== EASTER EGG: 7 CLIQUES NO LOGO ========== */
+let logoClicks = 0;
+let logoTimer;
+document.getElementById('logo-trigger').addEventListener('click', () => {
+    logoClicks++;
+    clearTimeout(logoTimer);
+    if (logoClicks >= 7) {
+        diagnosticoDB();
+        logoClicks = 0;
+    } else {
+        logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
+    }
+});
+
+/* ========== INICIALIZAÇÃO ========== */
+carregarDB();
+popularCidades();
+atualizarHome();
+</script>
+</body>
+</html>
